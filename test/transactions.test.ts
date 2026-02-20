@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as transactionsService from '../services/transactions';
-import { ddb } from '../services/dynamoClient';
+import * as transactionsService from '../src/services/transactions';
+import { ddb } from '../src/services/dynamoClient';
 
 const FIXED_DATE = '2026-02-18T18:00:00.000Z';
 

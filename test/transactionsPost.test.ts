@@ -1,18 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
-vi.mock('../services/auth', () => ({
+// Ahora usamos '@/' como prefijo en los mocks. Vitest resuelve '@/'
+// como la carpeta src/ gracias al alias, garantizando que el mock
+// intercepte exactamente el módulo que usa el handler.
+vi.mock('@/services/auth', () => ({
   validateToken: vi.fn(),
 }));
 
-vi.mock('../services/transactions', () => ({
+vi.mock('@/services/transactions', () => ({
   createTransaction: vi.fn(),
 }));
 
-import { handler } from '../handlers/transactionsPost';
-import { validateToken } from '../services/auth';
-import { createTransaction } from '../services/transactions';
+import { handler } from '../src/handlers/transactionsPost';
+import { validateToken } from '../src/services/auth';
+import { createTransaction } from '../src/services/transactions';
 
+// El resto de los tests no cambia en absoluto
 describe('transactionsPost handler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -20,25 +24,18 @@ describe('transactionsPost handler', () => {
 
   it('returns 201 when transaction is created successfully', async () => {
     (validateToken as any).mockResolvedValue({ sub: 'user-1' });
-    (createTransaction as any).mockResolvedValue({
-      txId: 'tx-123',
-      amount: 100,
-    });
+    (createTransaction as any).mockResolvedValue({ txId: 'tx-123', amount: 100 });
 
     const event = {
-        headers: {
-            Authorization: 'Bearer fake-token',
-        },
-        body: JSON.stringify({ amount: 100 }),
+      headers: { Authorization: 'Bearer fake-token' },
+      body: JSON.stringify({ amount: 100 }),
     } as unknown as APIGatewayProxyEvent;
 
     const raw = await handler(event, {} as any, () => {});
     const response = raw as APIGatewayProxyResult;
 
     expect(response.statusCode).toBe(201);
-
-    const body = JSON.parse(response.body);
-    expect(body.txId).toBe('tx-123');
+    expect(JSON.parse(response.body).txId).toBe('tx-123');
   });
 
   it('returns 401 when Authorization header is missing', async () => {
@@ -57,10 +54,8 @@ describe('transactionsPost handler', () => {
     (validateToken as any).mockResolvedValue({ sub: 'user-1' });
 
     const event = {
-        headers: {
-            Authorization: 'Bearer fake-token',
-        },
-        body: '{ invalid json }',
+      headers: { Authorization: 'Bearer fake-token' },
+      body: '{ invalid json }',
     } as unknown as APIGatewayProxyEvent;
 
     const raw = await handler(event, {} as any, () => {});
@@ -74,10 +69,8 @@ describe('transactionsPost handler', () => {
     (createTransaction as any).mockRejectedValue(new Error('DB down'));
 
     const event = {
-        headers: {
-            Authorization: 'Bearer fake-token',
-        },
-        body: JSON.stringify({ amount: 100 }),
+      headers: { Authorization: 'Bearer fake-token' },
+      body: JSON.stringify({ amount: 100 }),
     } as unknown as APIGatewayProxyEvent;
 
     const raw = await handler(event, {} as any, () => {});
